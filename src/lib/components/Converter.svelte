@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { appData, type UrlItem } from '$lib/appData.svelte';
-
+	import { ScrollArea } from 'bits-ui';
 	// Main component state
 	let currentEmbed = $state('');
 	let currentVideoId = $state<string | null>(null);
@@ -384,72 +384,85 @@
 					>{'Next'}</button
 				>
 
-				<div class="mt-2 max-h-[500px] overflow-y-auto rounded border border-gray-300">
-					{#each appData.items as item (item.id)}
-						<div
-							class="border-b border-gray-200 p-4 {currentVideoId === item.id ? 'bg-gray-800' : ''}"
-						>
-							{#if editingId === item.id}
-								<!-- Edit mode -->
-								<div class="mb-4">
-									<input
-										bind:value={editTitle}
-										placeholder="Title..."
-										class="mb-2 w-full rounded border border-gray-300 p-2"
-									/>
-									<input
-										bind:value={editUrl}
-										placeholder="URL..."
-										class="w-full rounded border border-gray-300 p-2"
-									/>
-								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={handleSaveEdit}
-										class="cursor-pointer rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
-									>
-										Save
-									</button>
-									<button
-										onclick={handleCancelEdit}
-										class="cursor-pointer rounded bg-gray-600 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
-									>
-										Cancel
-									</button>
-								</div>
-							{:else}
-								<!-- View mode -->
-								<div class="mb-2">
-									<button
-										onclick={() => loadVideo(item.embedUrl, item.id)}
-										class="cursor-pointer border-none bg-none p-0 text-left font-medium text-white underline hover:text-blue-300 {currentVideoId ===
-										item.id
-											? 'text-blue-400'
-											: ''}"
-									>
-										{currentVideoId === item.id ? '▶ ' : ''}{item.title}
-									</button>
-								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={() => handleEdit(item)}
-										class="cursor-pointer text-xs text-blue-400"
-									>
-										Edit
-									</button>
-									<button
-										onclick={() => handleDelete(item.id)}
-										class="cursor-pointer text-xs text-red-800"
-									>
-										Delete
-									</button>
-								</div>
-							{/if}
-						</div>
-					{:else}
-						<div class="p-8 text-center text-gray-500">No videos saved yet. Add one above!</div>
-					{/each}
-				</div>
+				<ScrollArea.Root
+					class="relative h-[500px] w-full overflow-hidden rounded-[10px] border border-dark-10 shadow-card"
+				>
+					<ScrollArea.Viewport class="h-full w-full px-4 py-4">
+						{#each appData.items as item (item.id)}
+							<div
+								class="border-b border-gray-200 p-4 {currentVideoId === item.id
+									? 'bg-gray-800'
+									: ''}"
+							>
+								{#if editingId === item.id}
+									<!-- Edit mode -->
+									<div class="mb-4">
+										<input
+											bind:value={editTitle}
+											placeholder="Title..."
+											class="mb-2 w-full rounded border border-gray-300 p-2"
+										/>
+										<input
+											bind:value={editUrl}
+											placeholder="URL..."
+											class="w-full rounded border border-gray-300 p-2"
+										/>
+									</div>
+									<div class="flex gap-2">
+										<button
+											onclick={handleSaveEdit}
+											class="cursor-pointer rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
+										>
+											Save
+										</button>
+										<button
+											onclick={handleCancelEdit}
+											class="cursor-pointer rounded bg-gray-600 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+										>
+											Cancel
+										</button>
+									</div>
+								{:else}
+									<!-- View mode -->
+									<div class="mb-2">
+										<button
+											onclick={() => loadVideo(item.embedUrl, item.id)}
+											class="cursor-pointer border-none bg-none p-0 text-left font-medium text-white underline hover:text-blue-300 {currentVideoId ===
+											item.id
+												? 'text-blue-400'
+												: ''}"
+										>
+											{currentVideoId === item.id ? '▶ ' : ''}{item.title}
+										</button>
+									</div>
+									<div class="flex gap-2">
+										<button
+											onclick={() => handleEdit(item)}
+											class="cursor-pointer text-xs text-blue-400"
+										>
+											Edit
+										</button>
+										<button
+											onclick={() => handleDelete(item.id)}
+											class="cursor-pointer text-xs text-red-800"
+										>
+											Delete
+										</button>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<div class="p-8 text-center text-gray-500">No videos saved yet. Add one above!</div>
+						{/each}
+					</ScrollArea.Viewport>
+					<ScrollArea.Scrollbar
+						orientation="vertical"
+						class="data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out-0 data-[state=visible]:fade-in-0 flex w-2.5 touch-none rounded-full border-l border-l-transparent bg-muted p-px transition-all duration-200 select-none hover:w-3 hover:bg-dark-10"
+					>
+						<ScrollArea.Thumb class="flex-1 rounded-full bg-muted-foreground" />
+					</ScrollArea.Scrollbar>
+					<ScrollArea.Corner />
+				</ScrollArea.Root>
 			</div>
 		</div>
 	</div>
