@@ -302,7 +302,7 @@
 				<button onclick={playPreviousVideo} class="bg-white px-8 py-1 text-black"
 					>{'Previous'}</button
 				>
-				<button onclick={repeatVideo} class="bg-white px-8 py-1 text-black">{'Repeat'}</button>
+				<button onclick={repeatVideo} class="bg-white px-8 py-1 text-black">{'Replay'}</button>
 				<div class="max-h-[500px] overflow-y-auto rounded border border-gray-300">
 					{#each appData.items as item (item.id)}
 						<div
