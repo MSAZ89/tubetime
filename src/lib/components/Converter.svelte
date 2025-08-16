@@ -204,7 +204,7 @@
 	});
 </script>
 
-<div class="mx-auto min-h-screen w-full bg-black p-5 font-sans">
+<div class="mx-auto min-h-screen w-full bg-black p-5 font-sans text-gray-300">
 	<div class="flex gap-2">
 		<!-- Video Player -->
 		<div class="w-full">
@@ -250,13 +250,13 @@
 						type="text"
 						bind:value={newUrl}
 						placeholder="YouTube URL..."
-						class="flex-2 rounded border border-gray-300 p-2.5 text-black"
+						class="flex-2 rounded border border-gray-300 p-2.5"
 					/>
 					<input
 						type="text"
 						bind:value={newTitle}
 						placeholder="Video title..."
-						class="flex-1 rounded border border-gray-300 p-2.5 text-black"
+						class="flex-1 rounded border border-gray-300 p-2.5"
 					/>
 				</div>
 				<div class="mb-4 flex items-center gap-4">
@@ -286,12 +286,12 @@
 									<input
 										bind:value={editTitle}
 										placeholder="Title..."
-										class="mb-2 w-full rounded border border-gray-300 p-2 text-black"
+										class="mb-2 w-full rounded border border-gray-300 p-2"
 									/>
 									<input
 										bind:value={editUrl}
 										placeholder="URL..."
-										class="w-full rounded border border-gray-300 p-2 text-black"
+										class="w-full rounded border border-gray-300 p-2"
 									/>
 								</div>
 								<div class="flex gap-2">
