@@ -127,6 +127,39 @@ function createAppData() {
 		return true;
 	}
 
+	// Set items from a raw payload (array of {url, title}). This will replace current items and persist.
+	function setItemsFromPayload(payload: Array<{ url: string; title?: string }>) {
+		const newItems: UrlItem[] = [];
+		for (const p of payload) {
+			const embedUrl = toEmbedUrl(p.url);
+			if (!embedUrl) continue; // skip invalid
+			newItems.push({
+				id: crypto.randomUUID(),
+				url: p.url,
+				title: p.title || 'Untitled Video',
+				embedUrl
+			});
+		}
+
+		// Replace contents of the existing reactive items array
+		items.splice(0, items.length, ...newItems);
+		saveToStorage(items);
+	}
+
+	// Serialize minimal playlist (url + title) to a base64 query-safe string
+	function serializeForUrl(): string {
+		try {
+			const payload = items.map((i) => ({ url: i.url, title: i.title }));
+			const json = JSON.stringify(payload);
+			// base64 encode unicode-safe
+			const b64 = btoa(unescape(encodeURIComponent(json)));
+			return encodeURIComponent(b64);
+		} catch (e) {
+			console.error('serializeForUrl error', e);
+			return '';
+		}
+	}
+
 	return {
 		get items() {
 			return items;
@@ -134,7 +167,9 @@ function createAppData() {
 		addItem,
 		updateItem,
 		deleteItem,
-		reorderItems
+		reorderItems,
+		setItemsFromPayload,
+		serializeForUrl
 	};
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { appData, type UrlItem } from '$lib/appData.svelte';
+	import { onMount } from 'svelte';
 
 	import Player from './Player.svelte';
 	import Controls from './Controls.svelte';
@@ -22,6 +23,9 @@
 
 	// Load YouTube API
 	function loadYouTubeAPI() {
+		// This function requires DOM; guard for SSR
+		if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
 		// Check if API is already loaded
 		if ((window as any).YT && (window as any).YT.Player) {
 			apiReady = true;
@@ -285,10 +289,70 @@
 		}
 	}
 
-	// Initialize YouTube API on component mount
-	$effect(() => {
+	// Initialize YouTube API and load shared playlist (client-only)
+	onMount(() => {
 		loadYouTubeAPI();
+
+		// On first load, check for playlist param (guard for SSR)
+		if (typeof window === 'undefined') return;
+		try {
+			const params = new URLSearchParams(window.location.search);
+			const pl = params.get('pl');
+			if (!pl) return;
+
+			// The token is encodeURIComponent(btoa(unescape(encodeURIComponent(json))))
+			// Reverse steps: percent-decode (maybe twice), atob, then decodeURIComponent(escape(...))
+			let b64 = pl;
+			try {
+				b64 = decodeURIComponent(b64);
+				// handle accidental double-encoding
+				const maybe = decodeURIComponent(b64);
+				if (maybe !== b64) b64 = maybe;
+			} catch (e) {
+				// ignore decode errors and continue with original
+			}
+			const raw = typeof atob !== 'undefined' ? atob(b64) : b64;
+			let json = raw;
+			try {
+				json =
+					typeof escape !== 'undefined' ? decodeURIComponent(escape(raw)) : decodeURIComponent(raw);
+			} catch (e) {
+				// fallback: try direct decode
+				try {
+					json = decodeURIComponent(raw);
+				} catch (e2) {
+					json = raw;
+				}
+			}
+			const payload = JSON.parse(json) as Array<{ url: string; title?: string }>;
+			if (payload && payload.length) {
+				appData.setItemsFromPayload(payload);
+			}
+		} catch (e) {
+			console.error('Failed to parse playlist param', e);
+		}
 	});
+
+	function generateShareUrl() {
+		const token = appData.serializeForUrl();
+		if (!token) return alert('Could not generate share URL');
+
+		if (typeof window === 'undefined') return alert('Cannot generate URL in this environment');
+		const url = new URL(window.location.href);
+		url.searchParams.set('pl', token);
+
+		if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard
+				.writeText(url.toString())
+				.then(() => alert('Share URL copied to clipboard'))
+				.catch((e) => {
+					console.error('Clipboard error', e);
+					prompt('Copy this URL', url.toString());
+				});
+		} else {
+			prompt('Copy this URL', url.toString());
+		}
+	}
 
 	// Handle autoplay toggle - recreate player if needed
 	$effect(() => {
@@ -326,6 +390,7 @@
 				onPrev={playPreviousVideo}
 				onNext={playNextVideo}
 				total={appData.items.length}
+				onShare={generateShareUrl}
 			/>
 
 			<div class="rounded-lg px-4 text-white">

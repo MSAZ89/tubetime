@@ -10,6 +10,7 @@
 	export let onPrev: () => void;
 	export let onNext: () => void;
 	export let total: number;
+	export let onShare: () => void;
 </script>
 
 <div class="rounded-lg px-4 text-white">
@@ -35,6 +36,12 @@
 			class="cursor-pointer rounded bg-blue-700 px-2 py-1 text-sm text-white hover:bg-blue-800"
 		>
 			Add Video
+		</button>
+		<button
+			on:click={onShare}
+			class="cursor-pointer rounded bg-green-700 px-2 py-1 text-sm text-white hover:bg-green-800"
+		>
+			Share Playlist
 		</button>
 		<label class="flex items-center gap-2 text-white">
 			<input
