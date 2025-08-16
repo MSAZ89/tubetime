@@ -74,6 +74,29 @@
 		}
 	}
 
+	function playPreviousVideo() {
+		const currentIndex = appData.items.findIndex((item) => item.id === currentVideoId);
+		if (currentIndex === -1) return;
+
+		const nextIndex = (currentIndex - 1) % appData.items.length;
+		const nextItem = appData.items[nextIndex];
+
+		if (nextItem) {
+			console.log('Playing previous video:', nextItem.title);
+			loadVideo(nextItem.embedUrl, nextItem.id);
+		}
+	}
+
+	function repeatVideo() {
+		// Find current video and replay it
+		const currentItem = appData.items.find((item) => item.id === currentVideoId);
+
+		if (currentItem) {
+			console.log('Replaying video:', currentItem.title);
+			loadVideo(currentItem.embedUrl, currentItem.id);
+		}
+	}
+
 	function createPlayer(videoId: string) {
 		if (!apiReady || !playerContainer) return;
 
@@ -204,7 +227,7 @@
 	});
 </script>
 
-<div class="mx-auto min-h-screen w-full bg-black p-5 font-sans text-gray-300">
+<div class="mx-auto w-full bg-black p-5 font-sans text-gray-300">
 	<div class="flex gap-2">
 		<!-- Video Player -->
 		<div class="w-full">
@@ -275,6 +298,11 @@
 					</label>
 				</div>
 				<h3 class="mb-4 text-lg font-semibold text-white">Saved Videos ({appData.items.length})</h3>
+				<button onclick={playNextVideo} class="bg-white px-8 py-1 text-black">{'Next'}</button>
+				<button onclick={playPreviousVideo} class="bg-white px-8 py-1 text-black"
+					>{'Previous'}</button
+				>
+				<button onclick={repeatVideo} class="bg-white px-8 py-1 text-black">{'Repeat'}</button>
 				<div class="max-h-[500px] overflow-y-auto rounded border border-gray-300">
 					{#each appData.items as item (item.id)}
 						<div
