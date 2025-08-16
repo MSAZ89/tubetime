@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { appData, type UrlItem } from '$lib/appData.svelte';
-	import { ScrollArea } from 'bits-ui';
+
+	import Player from './Player.svelte';
+	import Controls from './Controls.svelte';
+	import VideoList from './VideoList.svelte';
 	// Main component state
 	let currentEmbed = $state('');
 	let currentVideoId = $state<string | null>(null);
@@ -15,7 +18,7 @@
 	let player: any = null;
 	let playerReady = $state(false);
 	let apiReady = $state(false);
-	let playerContainer: HTMLDivElement | null = null;
+	let playerContainer: HTMLDivElement | null = $state(null);
 
 	// Load YouTube API
 	function loadYouTubeAPI() {
@@ -299,169 +302,44 @@
 <div class="mx-auto w-full bg-black p-5 font-sans text-gray-300">
 	<div class="flex gap-2">
 		<!-- Video Player -->
-		<div class="w-full">
-			{#if autoplayPlaylist && apiReady}
-				<!-- YouTube Player API container -->
-				<div
-					bind:this={playerContainer}
-					class="aspect-video w-full rounded-lg bg-black"
-					style="height: auto;"
-				></div>
-			{:else if currentEmbed}
-				<!-- Regular iframe -->
-				<iframe
-					width="100%"
-					height="100%"
-					src={currentEmbed}
-					title="YouTube video player"
-					frameborder="0"
-					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-					referrerpolicy="strict-origin-when-cross-origin"
-					allowfullscreen
-					class="aspect-video rounded-lg"
-				></iframe>
-			{:else}
-				<div
-					class="flex aspect-video items-center justify-center rounded-lg border-2 border-dashed text-white"
-				>
-					{#if autoplayPlaylist && !apiReady}
-						Loading YouTube API...
-					{:else}
-						Click a video title to play it here
-					{/if}
-				</div>
-			{/if}
-		</div>
-		<!-- URL List -->
-		<div class="w-1/2">
-			<!-- Add new URL form -->
-			<div class="rounded-lg px-4 text-white">
-				<div class="mb-4 flex gap-4">
-					<input
-						type="text"
-						bind:value={newUrl}
-						placeholder="YouTube URL..."
-						class="flex-2 rounded border border-gray-300 p-2.5"
-					/>
-					<input
-						type="text"
-						bind:value={newTitle}
-						placeholder="Video title..."
-						class="flex-1 rounded border border-gray-300 p-2.5"
-					/>
-				</div>
-				<div class="mb-4 flex items-center gap-4">
-					<button
-						onclick={handleAdd}
-						class="cursor-pointer rounded bg-blue-700 px-2 py-1 text-sm text-white hover:bg-blue-800"
-					>
-						Add Video
-					</button>
-					<label class="flex items-center gap-2 text-white">
-						<input type="checkbox" bind:checked={autoplayPlaylist} class="rounded" />
-						Auto-playlist
-						<span class="text-sm text-gray-300">
-							{autoplayPlaylist ? '(ON - Using YT API)' : '(OFF - Using iframe)'}
-						</span>
-					</label>
-				</div>
-				<h3 class="mb-4 text-lg font-semibold text-white">Saved Videos ({appData.items.length})</h3>
-				<button
-					onclick={repeatVideoDirect}
-					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
-				>
-					Replay
-				</button>
-				<button
-					onclick={playPreviousVideo}
-					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
-					>{'Previous'}</button
-				>
-				<button
-					onclick={playNextVideo}
-					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
-					>{'Next'}</button
-				>
+		<Player
+			{autoplayPlaylist}
+			{apiReady}
+			{currentEmbed}
+			setContainer={(el) => (playerContainer = el)}
+		/>
 
-				<ScrollArea.Root
-					class="relative h-[500px] w-full overflow-hidden rounded-[10px] border border-dark-10 shadow-card"
-				>
-					<ScrollArea.Viewport class="h-full w-full  py-4">
-						{#each appData.items as item (item.id)}
-							<div
-								class="border-b border-gray-200 p-4 {currentVideoId === item.id
-									? 'bg-gray-800'
-									: ''}"
-							>
-								{#if editingId === item.id}
-									<!-- Edit mode -->
-									<div class="mb-4">
-										<input
-											bind:value={editTitle}
-											placeholder="Title..."
-											class="mb-2 w-full rounded border border-gray-300 p-2"
-										/>
-										<input
-											bind:value={editUrl}
-											placeholder="URL..."
-											class="w-full rounded border border-gray-300 p-2"
-										/>
-									</div>
-									<div class="flex gap-2">
-										<button
-											onclick={handleSaveEdit}
-											class="cursor-pointer rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
-										>
-											Save
-										</button>
-										<button
-											onclick={handleCancelEdit}
-											class="cursor-pointer rounded bg-gray-600 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
-										>
-											Cancel
-										</button>
-									</div>
-								{:else}
-									<!-- View mode -->
-									<div class="mb-2">
-										<button
-											onclick={() => loadVideo(item.embedUrl, item.id)}
-											class="cursor-pointer border-none bg-none p-0 text-left font-medium text-white underline hover:text-blue-300 {currentVideoId ===
-											item.id
-												? 'text-blue-400'
-												: ''}"
-										>
-											{currentVideoId === item.id ? '▶ ' : ''}{item.title}
-										</button>
-									</div>
-									<div class="flex gap-2">
-										<button
-											onclick={() => handleEdit(item)}
-											class="cursor-pointer text-xs text-blue-400"
-										>
-											Edit
-										</button>
-										<button
-											onclick={() => handleDelete(item.id)}
-											class="cursor-pointer text-xs text-red-800"
-										>
-											Delete
-										</button>
-									</div>
-								{/if}
-							</div>
-						{:else}
-							<div class="p-8 text-center text-gray-500">No videos saved yet. Add one above!</div>
-						{/each}
-					</ScrollArea.Viewport>
-					<ScrollArea.Scrollbar
-						orientation="vertical"
-						class="data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out-0 data-[state=visible]:fade-in-0 flex w-2.5 touch-none rounded-full border-l border-l-transparent bg-muted p-px transition-all duration-200 select-none hover:w-3 hover:bg-dark-10"
-					>
-						<ScrollArea.Thumb class="flex-1 rounded-full bg-muted-foreground" />
-					</ScrollArea.Scrollbar>
-					<ScrollArea.Corner />
-				</ScrollArea.Root>
+		<!-- URL List / Controls -->
+		<div class="w-1/2">
+			<Controls
+				{newUrl}
+				{newTitle}
+				onNewUrlChange={(v) => (newUrl = v)}
+				onNewTitleChange={(v) => (newTitle = v)}
+				onAdd={handleAdd}
+				{autoplayPlaylist}
+				onToggleAutoplay={(v) => (autoplayPlaylist = v)}
+				onReplay={repeatVideoDirect}
+				onPrev={playPreviousVideo}
+				onNext={playNextVideo}
+				total={appData.items.length}
+			/>
+
+			<div class="rounded-lg px-4 text-white">
+				<VideoList
+					items={appData.items}
+					{currentVideoId}
+					{editingId}
+					{editUrl}
+					{editTitle}
+					onLoadVideo={(u, id) => loadVideo(u, id)}
+					onEdit={(item) => handleEdit(item)}
+					onDelete={(id) => handleDelete(id)}
+					onSaveEdit={handleSaveEdit}
+					onCancelEdit={handleCancelEdit}
+					onChangeEditUrl={(v) => (editUrl = v)}
+					onChangeEditTitle={(v) => (editTitle = v)}
+				/>
 			</div>
 		</div>
 	</div>
