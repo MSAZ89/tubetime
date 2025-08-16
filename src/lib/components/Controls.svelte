@@ -13,7 +13,7 @@
 </script>
 
 <div class="rounded-lg px-4 text-white">
-	<div class="mb-4 flex gap-4">
+	<div class="mt-4 mb-4 flex flex-wrap gap-4 sm:mt-0">
 		<input
 			type="text"
 			value={newUrl}

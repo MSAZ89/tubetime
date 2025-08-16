@@ -126,6 +126,9 @@
 			const originalEmbed = currentEmbed;
 
 			// Clear the iframe first
+			// The following code was incorrectly placed inside a TypeScript function and caused a compile error.
+			// If you need to render this HTML, move it to the markup section of your Svelte file.
+			// Otherwise, remove it from the function body.
 			currentEmbed = '';
 
 			// Then reload it after a brief delay
@@ -300,7 +303,7 @@
 </script>
 
 <div class="mx-auto w-full bg-black p-5 font-sans text-gray-300">
-	<div class="flex gap-2">
+	<div class="gap-2 sm:flex">
 		<!-- Video Player -->
 		<Player
 			{autoplayPlaylist}
@@ -310,7 +313,7 @@
 		/>
 
 		<!-- URL List / Controls -->
-		<div class="w-1/2">
+		<div class="sm:w-1/2">
 			<Controls
 				{newUrl}
 				{newTitle}
@@ -332,6 +335,7 @@
 					{editingId}
 					{editUrl}
 					{editTitle}
+					onReorder={(from, to) => appData.reorderItems(from, to)}
 					onLoadVideo={(u, id) => loadVideo(u, id)}
 					onEdit={(item) => handleEdit(item)}
 					onDelete={(id) => handleDelete(id)}

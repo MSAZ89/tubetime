@@ -116,13 +116,25 @@ function createAppData() {
 		return true;
 	}
 
+	function reorderItems(fromIndex: number, toIndex: number): boolean {
+		if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) {
+			return false;
+		}
+
+		const [moved] = items.splice(fromIndex, 1);
+		items.splice(toIndex, 0, moved);
+		saveToStorage(items);
+		return true;
+	}
+
 	return {
 		get items() {
 			return items;
 		},
 		addItem,
 		updateItem,
-		deleteItem
+		deleteItem,
+		reorderItems
 	};
 }
 
