@@ -9,7 +9,7 @@
 	let editingId = $state<string | null>(null);
 	let editUrl = $state('');
 	let editTitle = $state('');
-	let autoplayPlaylist = $state(false);
+	let autoplayPlaylist = $state(true);
 
 	// YouTube Player API
 	let player: any = null;
@@ -88,12 +88,52 @@
 	}
 
 	function repeatVideo() {
-		// Find current video and replay it
+		console.log('repeatVideo called');
+
+		if (!currentVideoId) {
+			console.log('No current video to repeat');
+			return;
+		}
+
 		const currentItem = appData.items.find((item) => item.id === currentVideoId);
 
 		if (currentItem) {
 			console.log('Replaying video:', currentItem.title);
-			loadVideo(currentItem.embedUrl, currentItem.id);
+			loadVideo(currentItem.embedUrl, currentItem.id, false); // Don't force reload, just restart
+		} else {
+			console.log('Could not find current item');
+		}
+	}
+
+	function repeatVideoDirect() {
+		console.log('repeatVideoDirect called');
+
+		if (autoplayPlaylist && player) {
+			// YouTube API method - this works great
+			try {
+				console.log('Using YouTube API seekTo(0)');
+				player.seekTo(0);
+				player.playVideo();
+			} catch (e) {
+				console.error('YouTube API error:', e);
+			}
+		} else if (currentEmbed) {
+			// iframe method - force complete reload by clearing and resetting
+			console.log('Force reloading iframe');
+			const originalEmbed = currentEmbed;
+
+			// Clear the iframe first
+			currentEmbed = '';
+
+			// Then reload it after a brief delay
+			setTimeout(() => {
+				const url = new URL(originalEmbed);
+				// Add a random parameter to force fresh load
+				url.searchParams.set('v', Date.now().toString());
+				url.searchParams.set('autoplay', '1');
+				url.searchParams.set('t', '0');
+				currentEmbed = url.toString();
+			}, 100);
 		}
 	}
 
@@ -185,22 +225,51 @@
 		}
 	}
 
-	function loadVideo(embedUrl: string, itemId?: string) {
+	function loadVideo(embedUrl: string, itemId?: string, forceReload = false) {
 		const videoId = extractVideoId(embedUrl);
 		if (!videoId) return;
 
-		currentVideoId = itemId || appData.items.find((item) => item.embedUrl === embedUrl)?.id || null;
+		const newVideoId =
+			itemId || appData.items.find((item) => item.embedUrl === embedUrl)?.id || null;
+		const isSameVideo = currentVideoId === newVideoId;
+
+		currentVideoId = newVideoId;
 
 		if (autoplayPlaylist && apiReady) {
 			// Use YouTube Player API for autoplay functionality
 			currentEmbed = '';
-			setTimeout(() => createPlayer(videoId), 100);
+
+			if (isSameVideo && player && !forceReload) {
+				// Same video - just restart it
+				console.log('Restarting current video via API');
+				try {
+					player.seekTo(0);
+					player.playVideo();
+				} catch (e) {
+					console.error('Error restarting video:', e);
+					// Fallback: recreate player
+					setTimeout(() => createPlayer(videoId), 100);
+				}
+			} else {
+				// Different video or forced reload - create new player
+				setTimeout(() => createPlayer(videoId), 100);
+			}
 		} else {
 			// Use iframe for non-autoplay
 			const url = new URL(embedUrl);
 			url.searchParams.set('autoplay', '1');
 			url.searchParams.set('mute', '0');
-			currentEmbed = url.toString();
+
+			if (isSameVideo && !forceReload) {
+				// Same video - add timestamp to force restart
+				url.searchParams.set('t', '0');
+				// Force iframe refresh by changing src
+				setTimeout(() => {
+					currentEmbed = url.toString();
+				}, 50);
+			} else {
+				currentEmbed = url.toString();
+			}
 
 			// Destroy player if it exists
 			if (player) {
@@ -267,7 +336,7 @@
 		<div class="w-1/2">
 			<!-- Add new URL form -->
 			<div class="rounded-lg px-4 text-white">
-				<h3 class="mt-0 mb-4 text-lg font-semibold">Add New Video</h3>
+				<h3 class="mb-4 text-lg font-semibold">Add New Video</h3>
 				<div class="mb-4 flex gap-4">
 					<input
 						type="text"
@@ -285,7 +354,7 @@
 				<div class="mb-4 flex items-center gap-4">
 					<button
 						onclick={handleAdd}
-						class="cursor-pointer rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800"
+						class="cursor-pointer rounded bg-blue-700 px-2 py-1 text-sm text-white hover:bg-blue-800"
 					>
 						Add Video
 					</button>
@@ -298,12 +367,24 @@
 					</label>
 				</div>
 				<h3 class="mb-4 text-lg font-semibold text-white">Saved Videos ({appData.items.length})</h3>
-				<button onclick={playNextVideo} class="bg-white px-8 py-1 text-black">{'Next'}</button>
-				<button onclick={playPreviousVideo} class="bg-white px-8 py-1 text-black"
+				<button
+					onclick={repeatVideoDirect}
+					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
+				>
+					Replay
+				</button>
+				<button
+					onclick={playPreviousVideo}
+					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
 					>{'Previous'}</button
 				>
-				<button onclick={repeatVideo} class="bg-white px-8 py-1 text-black">{'Replay'}</button>
-				<div class="max-h-[500px] overflow-y-auto rounded border border-gray-300">
+				<button
+					onclick={playNextVideo}
+					class="bg-white px-3 py-1 text-xs text-black transition-colors hover:cursor-pointer hover:bg-gray-900 hover:text-white"
+					>{'Next'}</button
+				>
+
+				<div class="mt-2 max-h-[500px] overflow-y-auto rounded border border-gray-300">
 					{#each appData.items as item (item.id)}
 						<div
 							class="border-b border-gray-200 p-4 {currentVideoId === item.id ? 'bg-gray-800' : ''}"
@@ -352,13 +433,13 @@
 								<div class="flex gap-2">
 									<button
 										onclick={() => handleEdit(item)}
-										class="cursor-pointer rounded bg-yellow-400 px-2 py-1 text-xs text-black hover:bg-yellow-500"
+										class="cursor-pointer text-xs text-blue-400"
 									>
 										Edit
 									</button>
 									<button
 										onclick={() => handleDelete(item.id)}
-										class="cursor-pointer rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+										class="cursor-pointer text-xs text-red-800"
 									>
 										Delete
 									</button>
