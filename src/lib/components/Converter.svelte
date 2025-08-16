@@ -336,7 +336,6 @@
 		<div class="w-1/2">
 			<!-- Add new URL form -->
 			<div class="rounded-lg px-4 text-white">
-				<h3 class="mb-4 text-lg font-semibold">Add New Video</h3>
 				<div class="mb-4 flex gap-4">
 					<input
 						type="text"
@@ -387,7 +386,7 @@
 				<ScrollArea.Root
 					class="relative h-[500px] w-full overflow-hidden rounded-[10px] border border-dark-10 shadow-card"
 				>
-					<ScrollArea.Viewport class="h-full w-full px-4 py-4">
+					<ScrollArea.Viewport class="h-full w-full  py-4">
 						{#each appData.items as item (item.id)}
 							<div
 								class="border-b border-gray-200 p-4 {currentVideoId === item.id
