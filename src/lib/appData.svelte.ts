@@ -93,9 +93,11 @@ function createAppData() {
 	}
 
 	function deleteAllItems() {
-		items = [];
-		saveToStorage(items);
-		window.location.href = '/'; // Redirect to home after deletion
+		if (confirm('Are you sure you want to clear the playlist?')) {
+			items = [];
+			saveToStorage(items);
+			window.location.href = '/'; // Redirect to home after deletion
+		}
 	}
 
 	function updateItem(id: string, updates: Partial<Pick<UrlItem, 'url' | 'title'>>): boolean {
