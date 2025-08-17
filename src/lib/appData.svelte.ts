@@ -93,7 +93,11 @@ function createAppData() {
 	}
 
 	function deleteAllItems() {
-		if (confirm('Are you sure you want to clear the playlist?')) {
+		if (
+			confirm(
+				'Are you sure you want to clear the playlist? Be sure you have bookmarked your playlist!'
+			)
+		) {
 			items = [];
 			saveToStorage(items);
 			window.location.href = '/'; // Redirect to home after deletion
