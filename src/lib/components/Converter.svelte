@@ -179,15 +179,20 @@
 		});
 	}
 
-	function handleAdd() {
+	async function handleAdd() {
 		if (!newUrl.trim()) return;
 
-		const success = appData.addItem(newUrl, newTitle);
-		if (success) {
-			newUrl = '';
-			newTitle = '';
-		} else {
-			alert('Invalid YouTube URL');
+		try {
+			const success = await appData.addItem(newUrl, newTitle);
+			if (success) {
+				newUrl = '';
+				newTitle = '';
+			} else {
+				alert('Invalid YouTube URL');
+			}
+		} catch (error) {
+			console.error('Error adding item:', error);
+			alert('Failed to add video. Please try again.');
 		}
 	}
 
@@ -197,20 +202,25 @@
 		editTitle = item.title;
 	}
 
-	function handleSaveEdit() {
+	async function handleSaveEdit() {
 		if (!editingId) return;
 
-		const success = appData.updateItem(editingId, {
-			url: editUrl,
-			title: editTitle
-		});
+		try {
+			const success = await appData.updateItem(editingId, {
+				url: editUrl,
+				title: editTitle
+			});
 
-		if (success) {
-			editingId = null;
-			editUrl = '';
-			editTitle = '';
-		} else {
-			alert('Invalid YouTube URL');
+			if (success) {
+				editingId = null;
+				editUrl = '';
+				editTitle = '';
+			} else {
+				alert('Invalid YouTube URL');
+			}
+		} catch (error) {
+			console.error('Error updating item:', error);
+			alert('Failed to update video. Please try again.');
 		}
 	}
 

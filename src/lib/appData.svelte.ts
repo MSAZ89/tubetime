@@ -49,6 +49,29 @@ function toEmbedUrl(url: string): string {
 	return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
 }
 
+// Fetch YouTube video title using oEmbed with CORS proxy
+async function fetchYouTubeTitle(url: string): Promise<string> {
+	try {
+		// Use a CORS proxy to bypass browser restrictions
+		const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+		const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(oembedUrl)}`;
+
+		const response = await fetch(proxyUrl);
+
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+
+		const data = await response.json();
+		console.log('Fetched title:', data.title); // Debug log
+		return data.title || 'Untitled Video';
+	} catch (error) {
+		console.warn('Failed to fetch YouTube title:', error);
+		console.warn('Error details:', error);
+		return 'Untitled Video';
+	}
+}
+
 function createAppData() {
 	const STORAGE_KEY = 'youtube-urls';
 
@@ -76,18 +99,50 @@ function createAppData() {
 
 	let items = $state<UrlItem[]>(loadFromStorage());
 
-	function addItem(url: string, title: string): boolean {
+	// Modified addItem to automatically fetch YouTube titles
+	async function addItem(url: string, title?: string): Promise<boolean> {
 		const embedUrl = toEmbedUrl(url);
 		if (!embedUrl) return false; // Invalid YouTube URL
+
+		// If no title provided, fetch it from YouTube
+		let finalTitle = title;
+		if (!finalTitle) {
+			finalTitle = await fetchYouTubeTitle(url);
+		}
 
 		const newItem: UrlItem = {
 			id: crypto.randomUUID(),
 			url,
-			title: title || 'Untitled Video',
+			title: finalTitle || 'Untitled Video',
 			embedUrl
 		};
 
 		items.push(newItem);
+		saveToStorage(items); // Save immediately after change
+		return true;
+	}
+
+	// Also update the updateItem function to fetch title when URL changes
+	async function updateItem(
+		id: string,
+		updates: Partial<Pick<UrlItem, 'url' | 'title'>>
+	): Promise<boolean> {
+		const index = items.findIndex((item) => item.id === id);
+		if (index === -1) return false;
+
+		const updatedItem = { ...items[index], ...updates };
+
+		if (updates.url) {
+			updatedItem.embedUrl = toEmbedUrl(updates.url);
+			if (!updatedItem.embedUrl) return false; // Invalid YouTube URL
+
+			// If URL changed but no new title provided, fetch it
+			if (!updates.title) {
+				updatedItem.title = await fetchYouTubeTitle(updates.url);
+			}
+		}
+
+		items[index] = updatedItem;
 		saveToStorage(items); // Save immediately after change
 		return true;
 	}
@@ -102,21 +157,6 @@ function createAppData() {
 			saveToStorage(items);
 			window.location.href = '/'; // Redirect to home after deletion
 		}
-	}
-
-	function updateItem(id: string, updates: Partial<Pick<UrlItem, 'url' | 'title'>>): boolean {
-		const index = items.findIndex((item) => item.id === id);
-		if (index === -1) return false;
-
-		const updatedItem = { ...items[index], ...updates };
-		if (updates.url) {
-			updatedItem.embedUrl = toEmbedUrl(updates.url);
-			if (!updatedItem.embedUrl) return false; // Invalid YouTube URL
-		}
-
-		items[index] = updatedItem;
-		saveToStorage(items); // Save immediately after change
-		return true;
 	}
 
 	function deleteItem(id: string): boolean {
