@@ -92,6 +92,12 @@ function createAppData() {
 		return true;
 	}
 
+	function deleteAllItems() {
+		items = [];
+		saveToStorage(items);
+		window.location.href = '/'; // Redirect to home after deletion
+	}
+
 	function updateItem(id: string, updates: Partial<Pick<UrlItem, 'url' | 'title'>>): boolean {
 		const index = items.findIndex((item) => item.id === id);
 		if (index === -1) return false;
@@ -169,7 +175,8 @@ function createAppData() {
 		deleteItem,
 		reorderItems,
 		setItemsFromPayload,
-		serializeForUrl
+		serializeForUrl,
+		deleteAllItems
 	};
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { appData } from '$lib/appData.svelte';
 	export let newUrl: string;
 	export let newTitle: string;
 	export let onNewUrlChange: (v: string) => void;
@@ -51,10 +52,14 @@
 				class="rounded"
 			/>
 			Auto-playlist
-			<span class="text-sm text-gray-300"
-				>{autoplayPlaylist ? '(ON - Using YT API)' : '(OFF - Using iframe)'}</span
-			>
+			<span class="text-sm text-gray-300">{autoplayPlaylist ? '(ON)' : '(OFF)'}</span>
 		</label>
+		<button
+			on:click={appData.deleteAllItems}
+			class="cursor-pointer rounded bg-red-700 px-2 py-1 text-sm text-white hover:bg-red-800"
+		>
+			Delete All
+		</button>
 	</div>
 
 	<h3 class="mb-4 text-lg font-semibold text-white">Saved Videos ({total})</h3>

@@ -341,16 +341,25 @@
 		const url = new URL(window.location.href);
 		url.searchParams.set('pl', token);
 
+		// Copy to clipboard first
 		if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
 			navigator.clipboard
 				.writeText(url.toString())
-				.then(() => alert('Share URL copied to clipboard'))
+				.then(() => {
+					alert(
+						'Share URL copied to clipboard. Be sure to bookmark this page to save your playlist!'
+					);
+					// Navigate to the new URL
+					window.location.href = url.toString();
+				})
 				.catch((e) => {
 					console.error('Clipboard error', e);
 					prompt('Copy this URL', url.toString());
+					window.location.href = url.toString();
 				});
 		} else {
 			prompt('Copy this URL', url.toString());
+			window.location.href = url.toString();
 		}
 	}
 
