@@ -46,6 +46,7 @@
 		</button>
 		<label class="flex items-center gap-2 text-white">
 			<input
+				disabled
 				type="checkbox"
 				checked={autoplayPlaylist}
 				on:change={(e) => onToggleAutoplay((e.target as HTMLInputElement).checked)}
