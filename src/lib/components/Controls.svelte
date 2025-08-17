@@ -23,6 +23,7 @@
 			placeholder="YouTube URL..."
 			class="flex-2 rounded border border-gray-300 p-2.5"
 		/>
+		<!--
 		<input
 			type="text"
 			value={newTitle}
@@ -30,6 +31,7 @@
 			placeholder="Video title..."
 			class="flex-1 rounded border border-gray-300 p-2.5"
 		/>
+		-->
 	</div>
 	<div class="mb-4 flex items-center gap-4">
 		<button
