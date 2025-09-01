@@ -1,38 +1,10 @@
-# sv
+## Cleantube - Fu\*\* Ads.
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Watch your favorite Youtube playlists without ads using this tool:
 
-## Creating a project
+[https://cleantube-coral.vercel.app/](https://cleantube-coral.vercel.app/)
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+-For now, song URL's will need to be added 1 by 1.
+-After creating a playlist, click the "Share Playlist". This will reload the page and store your playlist in the URL. Save the new URL to bookmarks for future access.
+-Enjoy ad-free music (or shorts, movies, live, etc.)!
+-Only supports YouTube links.
