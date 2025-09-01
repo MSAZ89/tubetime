@@ -147,6 +147,11 @@ function createAppData() {
 		return true;
 	}
 
+	function randomizeItems() {
+		items = items.sort(() => Math.random() - 0.5);
+		saveToStorage(items);
+	}
+
 	function deleteAllItems() {
 		if (
 			confirm(
@@ -222,7 +227,8 @@ function createAppData() {
 		reorderItems,
 		setItemsFromPayload,
 		serializeForUrl,
-		deleteAllItems
+		deleteAllItems,
+		randomizeItems
 	};
 }
 
