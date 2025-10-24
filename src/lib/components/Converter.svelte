@@ -58,8 +58,19 @@
 		console.log('Player state changed:', event.data);
 		// YT.PlayerState.ENDED = 0
 		if (event.data === 0 && autoplayPlaylist) {
-			console.log('Video ended, playing next...');
-			setTimeout(() => playNextVideo(), 1000);
+			console.log('Video ended: advancing playlist via API if available');
+			try {
+				// Prefer letting the YouTube player handle playlist advancement internally.
+				if (player && typeof player.nextVideo === 'function') {
+					player.nextVideo();
+					return;
+				}
+			} catch (e) {
+				console.warn('player.nextVideo() failed, falling back to JS advance', e);
+			}
+
+			// Fallback: advance using our logic (works when not using player's internal playlist)
+			playNextVideo();
 		}
 	}
 
@@ -69,6 +80,16 @@
 	}
 
 	function playNextVideo() {
+		// If player API supports nextVideo, use it (this is resilient in background tabs)
+		if (player && typeof player.nextVideo === 'function') {
+			try {
+				player.nextVideo();
+				return;
+			} catch (e) {
+				console.warn('player.nextVideo() failed, falling back to JS advance', e);
+			}
+		}
+
 		const currentIndex = appData.items.findIndex((item) => item.id === currentVideoId);
 		if (currentIndex === -1) return;
 
@@ -82,15 +103,26 @@
 	}
 
 	function playPreviousVideo() {
+		// Prefer player API
+		if (player && typeof player.previousVideo === 'function') {
+			try {
+				player.previousVideo();
+				return;
+			} catch (e) {
+				console.warn('player.previousVideo() failed, falling back to JS', e);
+			}
+		}
+
 		const currentIndex = appData.items.findIndex((item) => item.id === currentVideoId);
 		if (currentIndex === -1) return;
 
-		const nextIndex = (currentIndex - 1) % appData.items.length;
-		const nextItem = appData.items[nextIndex];
+		// ensure positive index
+		const prevIndex = (currentIndex - 1 + appData.items.length) % appData.items.length;
+		const prevItem = appData.items[prevIndex];
 
-		if (nextItem) {
-			console.log('Playing previous video:', nextItem.title);
-			loadVideo(nextItem.embedUrl, nextItem.id);
+		if (prevItem) {
+			console.log('Playing previous video:', prevItem.title);
+			loadVideo(prevItem.embedUrl, prevItem.id);
 		}
 	}
 
@@ -147,33 +179,72 @@
 		}
 	}
 
-	function createPlayer(videoId: string) {
+	/**
+	 * Create or reuse the YT player. If playlistIds is provided, load the playlist
+	 * into the player so YouTube handles automatic advancement (more reliable in
+	 * background tabs where JS timers are throttled).
+	 */
+	function createPlayer(videoIdOrPlaylist: string | string[], startIndex = 0) {
 		if (!apiReady || !playerContainer) return;
 
-		// Destroy existing player
+		// If a playlist was provided and the player exists, ask it to load the playlist
+		if (player && Array.isArray(videoIdOrPlaylist)) {
+			try {
+				player.loadPlaylist(videoIdOrPlaylist, startIndex, 0);
+				return;
+			} catch (e) {
+				console.warn('Failed to load playlist into existing player, recreating', e);
+				try {
+					player.destroy();
+				} catch (e2) {
+					console.warn('Error destroying player during recreate', e2);
+				}
+				player = null;
+			}
+		}
+
+		// Destroy existing player if present
 		if (player) {
 			try {
 				player.destroy();
 			} catch (e) {
 				console.log('Error destroying player:', e);
 			}
+			player = null;
 		}
 
-		console.log('Creating player for video:', videoId);
+		console.log('Creating player for', videoIdOrPlaylist);
+
+		// Choose initial videoId for the player constructor
+		const initialVideoId = Array.isArray(videoIdOrPlaylist)
+			? videoIdOrPlaylist[Math.max(0, Math.min(startIndex, videoIdOrPlaylist.length - 1))]
+			: videoIdOrPlaylist;
 
 		player = new (window as any).YT.Player(playerContainer, {
 			height: '100%',
 			width: '100%',
-			videoId: videoId,
+			videoId: initialVideoId,
 			playerVars: {
 				autoplay: 1,
 				mute: 0,
 				controls: 1,
 				rel: 0,
-				modestbranding: 1
+				modestbranding: 1,
+				playsinline: 1
 			},
 			events: {
-				onReady: onPlayerReady,
+				onReady: (e: any) => {
+					onPlayerReady(e);
+					// If a playlist array was provided, load it now so the player handles advancement
+					if (Array.isArray(videoIdOrPlaylist) && videoIdOrPlaylist.length) {
+						try {
+							// loadPlaylist(playlist:Array, index:Number, startSeconds:Number)
+							player.loadPlaylist(videoIdOrPlaylist, startIndex, 0);
+						} catch (err) {
+							console.warn('player.loadPlaylist failed in onReady', err);
+						}
+					}
+				},
 				onStateChange: onPlayerStateChange
 			}
 		});
@@ -267,12 +338,25 @@
 					player.playVideo();
 				} catch (e) {
 					console.error('Error restarting video:', e);
-					// Fallback: recreate player
+					// Fallback: recreate player with single video
 					setTimeout(() => createPlayer(videoId), 100);
 				}
 			} else {
-				// Different video or forced reload - create new player
-				setTimeout(() => createPlayer(videoId), 100);
+				// Different video or forced reload - prefer loading the full playlist into the player
+				try {
+					const playlistIds = appData.items
+						.map((it) => extractVideoId(it.embedUrl))
+						.filter(Boolean);
+					const startIndex = Math.max(0, playlistIds.indexOf(videoId));
+					if (playlistIds.length) {
+						createPlayer(playlistIds, startIndex);
+					} else {
+						setTimeout(() => createPlayer(videoId), 100);
+					}
+				} catch (e) {
+					console.error('Error creating playlist player, falling back', e);
+					setTimeout(() => createPlayer(videoId), 100);
+				}
 			}
 		} else {
 			// Use iframe for non-autoplay
