@@ -56,13 +56,62 @@
 
 	function onPlayerStateChange(event: any) {
 		console.log('Player state changed:', event.data);
-		// YT.PlayerState.ENDED = 0
+		// YT.PlayerState constants: ENDED = 0, PLAYING = 1
+		if (event.data === 1) {
+			// When the player starts playing, sync our currentVideoId to the player's video
+			try {
+				let videoId = '';
+				if (player && typeof player.getVideoData === 'function') {
+					const data = player.getVideoData();
+					videoId = data && data.video_id ? data.video_id : '';
+				}
+
+				// If we couldn't get a video id from getVideoData, try playlist methods
+				if (!videoId && player && typeof player.getPlaylistIndex === 'function') {
+					try {
+						const idx = player.getPlaylistIndex();
+						const list = typeof player.getPlaylist === 'function' ? player.getPlaylist() : null;
+						if (Array.isArray(list) && typeof idx === 'number' && list[idx]) {
+							videoId = list[idx];
+						}
+					} catch (e) {
+						console.warn('Could not read playlist index/video from player', e);
+					}
+				}
+
+				if (videoId) {
+					// Find matching item in appData
+					const match = appData.items.find((it) => extractVideoId(it.embedUrl) === videoId);
+					if (match) {
+						currentVideoId = match.id;
+					} else {
+						// No match: clear or set to null
+						currentVideoId = null;
+					}
+				}
+			} catch (e) {
+				console.warn('Error syncing currentVideoId from player on PLAYING', e);
+			}
+		}
+
 		if (event.data === 0 && autoplayPlaylist) {
 			console.log('Video ended: advancing playlist via API if available');
 			try {
 				// Prefer letting the YouTube player handle playlist advancement internally.
 				if (player && typeof player.nextVideo === 'function') {
 					player.nextVideo();
+					// schedule a sync to update UI once the player advances
+					setTimeout(() => {
+						try {
+							if (player && typeof player.getVideoData === 'function') {
+								const id = player.getVideoData().video_id;
+								const match = appData.items.find((it) => extractVideoId(it.embedUrl) === id);
+								if (match) currentVideoId = match.id;
+							}
+						} catch (e) {
+							console.warn('Failed to sync after nextVideo', e);
+						}
+					}, 250);
 					return;
 				}
 			} catch (e) {
@@ -84,6 +133,18 @@
 		if (player && typeof player.nextVideo === 'function') {
 			try {
 				player.nextVideo();
+				// optimistic UI update: schedule a sync to set currentVideoId once player advances
+				setTimeout(() => {
+					try {
+						if (player && typeof player.getVideoData === 'function') {
+							const id = player.getVideoData().video_id;
+							const match = appData.items.find((it) => extractVideoId(it.embedUrl) === id);
+							if (match) currentVideoId = match.id;
+						}
+					} catch (e) {
+						console.warn('Failed to sync currentVideoId after nextVideo', e);
+					}
+				}, 250);
 				return;
 			} catch (e) {
 				console.warn('player.nextVideo() failed, falling back to JS advance', e);
@@ -107,6 +168,17 @@
 		if (player && typeof player.previousVideo === 'function') {
 			try {
 				player.previousVideo();
+				setTimeout(() => {
+					try {
+						if (player && typeof player.getVideoData === 'function') {
+							const id = player.getVideoData().video_id;
+							const match = appData.items.find((it) => extractVideoId(it.embedUrl) === id);
+							if (match) currentVideoId = match.id;
+						}
+					} catch (e) {
+						console.warn('Failed to sync currentVideoId after previousVideo', e);
+					}
+				}, 250);
 				return;
 			} catch (e) {
 				console.warn('player.previousVideo() failed, falling back to JS', e);
@@ -503,9 +575,7 @@
 		<div class="sm:w-1/2">
 			<Controls
 				{newUrl}
-				{newTitle}
 				onNewUrlChange={(v) => (newUrl = v)}
-				onNewTitleChange={(v) => (newTitle = v)}
 				onAdd={handleAdd}
 				{autoplayPlaylist}
 				onToggleAutoplay={(v) => (autoplayPlaylist = v)}

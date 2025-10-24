@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { appData } from '$lib/appData.svelte';
 	export let newUrl: string;
-	export let newTitle: string;
 	export let onNewUrlChange: (v: string) => void;
-	export let onNewTitleChange: (v: string) => void;
 	export let onAdd: () => void;
 	export let autoplayPlaylist: boolean;
 	export let onToggleAutoplay: (v: boolean) => void;

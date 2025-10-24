@@ -228,11 +228,28 @@ function createAppData() {
 		playlistUrl: string
 	): Promise<Array<{ url: string; title: string }>> {
 		// Extract playlist id from common YouTube playlist URL patterns
+		// Try to extract a playlist id, channel id, or accept a raw id.
 		const listMatch = playlistUrl.match(/[?&]list=([A-Za-z0-9_-]+)/);
-		if (!listMatch) return [];
-		const playlistId = listMatch[1];
+		const channelMatch = playlistUrl.match(/\/channel\/([A-Za-z0-9_-]+)/);
+		const rawIdMatch = playlistUrl.match(/^([A-Za-z0-9_-]{6,})$/);
 
-		const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+		let feedUrl = '';
+
+		if (listMatch) {
+			const playlistId = listMatch[1];
+			feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+		} else if (channelMatch) {
+			const channelId = channelMatch[1];
+			feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+		} else if (rawIdMatch) {
+			// If the user pasted a raw id (common when copying from some UIs),
+			// attempt to treat it as a playlist id first.
+			const playlistId = rawIdMatch[1];
+			feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+		} else {
+			// not a recognizable playlist/channel identifier
+			return [];
+		}
 
 		try {
 			// Helper: try fetching a URL and return response text or throw
