@@ -217,6 +217,115 @@ function createAppData() {
 		}
 	}
 
+	// Try to extract playlist items from a YouTube playlist URL without using the
+	// official Data API. This attempts to use YouTube's Atom/RSS feed for playlists
+	// which is available at:
+	//   https://www.youtube.com/feeds/videos.xml?playlist_id=PLAYLIST_ID
+	// Note: Many browsers block cross-origin requests to youtube.com (CORS). If the
+	// fetch fails due to CORS, the caller will receive an empty array and should
+	// surface a message to the user explaining they need a server-side proxy.
+	async function fetchPlaylistItemsFromUrl(
+		playlistUrl: string
+	): Promise<Array<{ url: string; title: string }>> {
+		// Extract playlist id from common YouTube playlist URL patterns
+		const listMatch = playlistUrl.match(/[?&]list=([A-Za-z0-9_-]+)/);
+		if (!listMatch) return [];
+		const playlistId = listMatch[1];
+
+		const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+
+		try {
+			// Helper: try fetching a URL and return response text or throw
+			const tryFetchText = async (u: string) => {
+				const r = await fetch(u);
+				if (!r.ok) throw new Error(`HTTP ${r.status}`);
+				return await r.text();
+			};
+
+			let text: string | null = null;
+			// First try direct fetch
+			try {
+				text = await tryFetchText(feedUrl);
+			} catch (err) {
+				console.warn('Direct fetch of playlist feed failed (will try proxies):', err);
+			}
+
+			// If direct failed, try a couple of public CORS proxies as a fallback.
+			if (!text) {
+				const proxies = [
+					`https://corsproxy.io/?${encodeURIComponent(feedUrl)}`,
+					`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`
+				];
+				for (const proxyUrl of proxies) {
+					try {
+						text = await tryFetchText(proxyUrl);
+						console.log('Fetched playlist feed via proxy:', proxyUrl);
+						break;
+					} catch (e2) {
+						console.warn('Proxy fetch failed for', proxyUrl, e2);
+					}
+				}
+			}
+
+			if (!text) {
+				console.warn('Playlist feed fetch failed for direct and proxy attempts');
+				return [];
+			}
+			// Parse XML
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(text, 'application/xml');
+			const entries = Array.from(doc.getElementsByTagName('entry')) as Element[];
+			if (!entries.length) {
+				// Try RSS 'item' fallback
+				const items = Array.from(doc.getElementsByTagName('item')) as Element[];
+				return items.map((it) => {
+					const linkEl = it.getElementsByTagName('link')[0];
+					const titleEl = it.getElementsByTagName('title')[0];
+					return {
+						url: linkEl ? linkEl.textContent || '' : '',
+						title: titleEl ? titleEl.textContent || 'Untitled Video' : 'Untitled Video'
+					};
+				});
+			}
+
+			const results: Array<{ url: string; title: string }> = [];
+			for (const entry of entries) {
+				// 'link' element often has href attribute
+				const linkEl = entry.getElementsByTagName('link')[0];
+				let url = '';
+				if (linkEl) {
+					url = linkEl.getAttribute('href') || linkEl.textContent || '';
+				}
+				// Fallback: <id> may contain 'yt:video:VIDEOID'
+				if (!url) {
+					const idEl = entry.getElementsByTagName('id')[0];
+					if (idEl && idEl.textContent) {
+						const m = idEl.textContent.match(/yt:video:([A-Za-z0-9_-]{11})/);
+						if (m) url = `https://www.youtube.com/watch?v=${m[1]}`;
+					}
+				}
+				const titleEl = entry.getElementsByTagName('title')[0];
+				const title = titleEl ? titleEl.textContent || 'Untitled Video' : 'Untitled Video';
+				if (url) results.push({ url, title });
+			}
+
+			return results;
+		} catch (err) {
+			console.warn('Failed to fetch/parse playlist feed (CORS or network error):', err);
+			return [];
+		}
+	}
+
+	// Adds items from a playlist URL by fetching the feed and replacing current items.
+	// Returns the number of items added. If zero, the caller should check for CORS
+	// restrictions and offer the user a server-side proxy option.
+	async function addItemsFromPlaylistUrl(playlistUrl: string): Promise<number> {
+		const payload = await fetchPlaylistItemsFromUrl(playlistUrl);
+		if (!payload || !payload.length) return 0;
+		setItemsFromPayload(payload);
+		return payload.length;
+	}
+
 	return {
 		get items() {
 			return items;
@@ -226,6 +335,8 @@ function createAppData() {
 		deleteItem,
 		reorderItems,
 		setItemsFromPayload,
+		fetchPlaylistItemsFromUrl,
+		addItemsFromPlaylistUrl,
 		serializeForUrl,
 		deleteAllItems,
 		randomizeItems

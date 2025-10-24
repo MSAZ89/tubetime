@@ -457,6 +457,26 @@
 		}
 	}
 
+	// Prompt the user for a playlist URL and try to import it (client-side)
+	async function importPlaylistPrompt() {
+		if (typeof window === 'undefined') return;
+		const url = prompt('Paste YouTube playlist URL (playlist?list=...)');
+		if (!url) return;
+		try {
+			const added = await appData.addItemsFromPlaylistUrl(url);
+			if (added > 0) {
+				alert(`Imported ${added} items from playlist.`);
+			} else {
+				alert(
+					"Could not import playlist items. This may be due to browser CORS blocking YouTube's feed. Try using a server-side proxy or add items manually."
+				);
+			}
+		} catch (e) {
+			console.error('Import playlist failed', e);
+			alert('Failed to import playlist. See console for details.');
+		}
+	}
+
 	// Handle autoplay toggle - recreate player if needed
 	$effect(() => {
 		if (currentVideoId && currentEmbed) {
@@ -494,6 +514,7 @@
 				onNext={playNextVideo}
 				total={appData.items.length}
 				onShare={generateShareUrl}
+				onImport={importPlaylistPrompt}
 			/>
 
 			<div class="rounded-lg px-4 text-white">
