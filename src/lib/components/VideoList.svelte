@@ -154,6 +154,7 @@
 						{:else}
 							<!-- View mode -->
 							<div class="mb-2">
+								<title>Cleantube | {item.title}</title>
 								<button
 									onclick={() => onLoadVideo(item.embedUrl, item.id)}
 									class="cursor-pointer border-none bg-none p-0 text-left font-medium text-white underline hover:text-blue-300 {currentVideoId ===
