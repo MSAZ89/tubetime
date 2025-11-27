@@ -97,7 +97,52 @@
 		if (event.data === 0 && autoplayPlaylist) {
 			console.log('Video ended: advancing playlist via API if available');
 			try {
-				// Prefer letting the YouTube player handle playlist advancement internally.
+				// If the player has playlist helpers, examine them to determine if we're at the end.
+				if (
+					player &&
+					typeof player.getPlaylistIndex === 'function' &&
+					typeof player.getPlaylist === 'function'
+				) {
+					try {
+						const idx = player.getPlaylistIndex();
+						const list = player.getPlaylist();
+						if (Array.isArray(list) && typeof idx === 'number') {
+							// If we're at the last index, wrap to the start explicitly.
+							if (idx >= list.length - 1) {
+								console.log('End of playlist reached - looping to start via playVideoAt(0)');
+								if (typeof player.playVideoAt === 'function') {
+									player.playVideoAt(0);
+								} else if (typeof player.nextVideo === 'function') {
+									// fallback to nextVideo() if playVideoAt missing
+									player.nextVideo();
+								}
+							} else {
+								// not the last item - advance normally
+								if (typeof player.nextVideo === 'function') player.nextVideo();
+							}
+
+							// schedule a sync to update UI once the player advances
+							setTimeout(() => {
+								try {
+									if (player && typeof player.getVideoData === 'function') {
+										const id = player.getVideoData().video_id;
+										const match = appData.items.find((it) => extractVideoId(it.embedUrl) === id);
+										if (match) currentVideoId = match.id;
+									}
+								} catch (e) {
+									console.warn('Failed to sync after advancing via API', e);
+								}
+							}, 250);
+
+							return;
+						}
+					} catch (e) {
+						console.warn('Could not read playlist index/video from player', e);
+						// fall through to generic nextVideo attempt/fallback below
+					}
+				}
+
+				// No playlist helpers or the above failed - try nextVideo() if available
 				if (player && typeof player.nextVideo === 'function') {
 					player.nextVideo();
 					// schedule a sync to update UI once the player advances
@@ -302,7 +347,10 @@
 				controls: 1,
 				rel: 0,
 				modestbranding: 1,
-				playsinline: 1
+				playsinline: 1,
+				// If we're initializing with a playlist array, set the playlist param as a CSV string.
+				// This helps ensure the player's internal playlist is recognized right away.
+				...(Array.isArray(videoIdOrPlaylist) ? { playlist: videoIdOrPlaylist.join(',') } : {})
 			},
 			events: {
 				onReady: (e: any) => {

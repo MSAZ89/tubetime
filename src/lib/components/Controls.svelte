@@ -51,17 +51,7 @@
 		>
 			Import Playlist URL
 		</button>
-		<label class="flex items-center gap-2 text-white">
-			<input
-				disabled
-				type="checkbox"
-				checked={autoplayPlaylist}
-				on:change={(e) => onToggleAutoplay((e.target as HTMLInputElement).checked)}
-				class="rounded"
-			/>
-			Auto-playlist
-			<span class="text-sm text-gray-300">{autoplayPlaylist ? '(ON)' : '(OFF)'}</span>
-		</label>
+
 		<button
 			on:click={() => appData.deleteAllItems()}
 			class="cursor-pointer rounded bg-red-700 px-2 py-1 text-sm text-white hover:bg-red-800"
@@ -70,7 +60,7 @@
 		</button>
 	</div>
 
-	<h3 class="mb-4 text-lg font-semibold text-white">Saved Videos ({total})</h3>
+	<h3 class="mb-4 text-lg font-semibold text-white">Playlist ({total})</h3>
 	<div class="mb-4 flex gap-2">
 		<button
 			on:click={onReplay}
